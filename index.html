@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F3EEE4">
+<title>Colony Counter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+  :root {
+    --bg: #F3EEE4;
+    --panel: #EAE2D4;
+    --ink: #2A1F17;
+    --muted: #7D6B59;
+    --line: #D3C6B1;
+    --accent: #7A5236;
+    --accent-ink: #F7F2EA;
+    --press: #5E3E28;
+    --num: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    --jp: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", "Noto Sans JP", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #1C1713;
+      --panel: #26201A;
+      --ink: #EFE6D8;
+      --muted: #A8957F;
+      --line: #3D3329;
+      --accent: #B8875C;
+      --accent-ink: #1C1713;
+      --press: #D19F72;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #1C1713;
+    --panel: #26201A;
+    --ink: #EFE6D8;
+    --muted: #A8957F;
+    --line: #3D3329;
+    --accent: #B8875C;
+    --accent-ink: #1C1713;
+    --press: #D19F72;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--jp);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    padding-inline: 16px;
+    padding-block: max(20px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-bottom, 0px));
+    min-height: 100vh;
+  }
+  .app {
+    max-width: 880px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--ink);
+  }
+  h1 {
+    margin: 0;
+    font-family: var(--num);
+    font-weight: 700;
+    font-size: clamp(28px, 7vw, 40px);
+    letter-spacing: 0.14em;
+    line-height: 1;
+    text-wrap: balance;
+  }
+  .sub {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  /* Counter */
+  .counter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .label {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+  }
+  .counter-row {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: clamp(16px, 5vw, 48px);
+    max-width: 560px;
+  }
+  .count-wrap {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+  }
+  .count {
+    font-family: var(--num);
+    font-weight: 700;
+    font-size: clamp(104px, 30vw, 176px);
+    line-height: 0.9;
+    font-variant-numeric: tabular-nums;
+    display: inline-block;
+  }
+  .unit {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .step {
+    width: clamp(80px, 22vw, 108px);
+    height: clamp(80px, 22vw, 108px);
+    border-radius: 18px;
+    border: 2px solid var(--accent);
+    font-family: var(--num);
+    font-size: clamp(48px, 13vw, 64px);
+    font-weight: 600;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    transition: transform 0.08s ease, background-color 0.15s ease, opacity 0.15s ease;
+  }
+  .step.plus { background: var(--accent); color: var(--accent-ink); }
+  .step.minus { background: transparent; color: var(--accent); }
+  .step:active { transform: scale(0.94); }
+  .step.plus:active { background: var(--press); border-color: var(--press); }
+  .step:disabled { opacity: 0.3; cursor: default; transform: none; }
+  .step:focus-visible, .reset:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
+  }
+
+  /* Stats */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 18px 8px 20px;
+  }
+  .stat + .stat { border-left: 1px solid var(--line); }
+  .stat-name {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .stat-en {
+    font-family: var(--num);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+  }
+  .stat-val {
+    font-family: var(--num);
+    font-weight: 700;
+    font-size: clamp(64px, 11vw, 92px);
+    line-height: 0.95;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    display: inline-block;
+  }
+  .stat-formula {
+    font-family: var(--num);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Reset */
+  .foot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding-top: 8px;
+  }
+  .reset {
+    min-width: 200px;
+    min-height: 52px;
+    padding: 0 28px;
+    border-radius: 12px;
+    border: 1.5px solid var(--muted);
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--jp);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .reset.armed {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+    letter-spacing: 0.06em;
+  }
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    min-height: 1.4em;
+  }
+
+  /* Change animation */
+  @keyframes bump {
+    0%   { transform: translateY(0) scale(1); }
+    35%  { transform: translateY(-3px) scale(1.06); color: var(--accent); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  @keyframes dip {
+    0%   { transform: translateY(0) scale(1); }
+    35%  { transform: translateY(3px) scale(0.95); opacity: 0.6; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  .up { animation: bump 0.28s ease-out; }
+  .down { animation: dip 0.28s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .up, .down { animation: none; }
+    .step, .reset { transition: none; }
+  }
+
+  /* Phone: stack stats vertically as rows */
+  @media (max-width: 600px) {
+    .app { gap: 22px; }
+    .stats { grid-template-columns: 1fr; }
+    .stat {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-areas: "name val" "formula val";
+      align-items: center;
+      column-gap: 12px;
+      row-gap: 2px;
+      padding: 12px 4px;
+    }
+    .stat + .stat { border-left: 0; border-top: 1px solid var(--line); }
+    .stat-name { grid-area: name; flex-direction: column; gap: 0; align-items: flex-start; }
+    .stat-formula { grid-area: formula; }
+    .stat-val { grid-area: val; font-size: clamp(60px, 18vw, 80px); }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <h1>COLONY COUNTER</h1>
+    <p class="sub">墓地の裏返しカードをカウント</p>
+  </header>
+
+  <section class="counter" aria-label="裏返しのカード">
+    <div class="label">裏返しのカード</div>
+    <div class="counter-row">
+      <button type="button" id="minus" class="step minus" aria-label="1枚減らす">−</button>
+      <div class="count-wrap">
+        <span id="count" class="count" aria-live="polite">0</span><span class="unit">枚</span>
+      </div>
+      <button type="button" id="plus" class="step plus" aria-label="1枚増やす">＋</button>
+    </div>
+  </section>
+
+  <section class="stats" aria-label="ステータス">
+    <div class="stat">
+      <div class="stat-name">ニンフ<span class="stat-en">NYMPH</span></div>
+      <span class="stat-val" data-base="100">100</span>
+      <div class="stat-formula">100 + <span class="f-n">0</span> × 200</div>
+    </div>
+    <div class="stat">
+      <div class="stat-name">ワーカー<span class="stat-en">WORKER</span></div>
+      <span class="stat-val" data-base="300">300</span>
+      <div class="stat-formula">300 + <span class="f-n">0</span> × 200</div>
+    </div>
+    <div class="stat">
+      <div class="stat-name">ソルジャー<span class="stat-en">SOLDIER</span></div>
+      <span class="stat-val" data-base="500">500</span>
+      <div class="stat-formula">500 + <span class="f-n">0</span> × 200</div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <button type="button" id="reset" class="reset">リセット</button>
+    <div id="hint" class="hint"></div>
+  </footer>
+</main>
+
+<script>
+(function () {
+  var STORAGE_KEY = 'colony-counter:face-down-count';
+  var PER_CARD = 200;
+
+  var countEl = document.getElementById('count');
+  var minusBtn = document.getElementById('minus');
+  var plusBtn = document.getElementById('plus');
+  var resetBtn = document.getElementById('reset');
+  var hintEl = document.getElementById('hint');
+  var statEls = Array.prototype.slice.call(document.querySelectorAll('.stat-val'));
+  var formulaNs = Array.prototype.slice.call(document.querySelectorAll('.f-n'));
+
+  function load() {
+    try {
+      var n = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+      return isFinite(n) && n > 0 ? n : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+  function save(n) {
+    try { localStorage.setItem(STORAGE_KEY, String(n)); } catch (e) {}
+  }
+
+  function statFor(base, n) { return base + n * PER_CARD; }
+
+  function animate(el, dir) {
+    el.classList.remove('up', 'down');
+    void el.offsetWidth; // restart the animation
+    el.classList.add(dir > 0 ? 'up' : 'down');
+  }
+
+  var count = load();
+
+  function render(dir) {
+    countEl.textContent = count;
+    statEls.forEach(function (el) {
+      el.textContent = statFor(Number(el.dataset.base), count);
+      if (dir) animate(el, dir);
+    });
+    formulaNs.forEach(function (el) { el.textContent = count; });
+    if (dir) animate(countEl, dir);
+    minusBtn.disabled = count === 0;
+  }
+
+  function setCount(next) {
+    next = Math.max(0, next);
+    if (next === count) return;
+    var dir = next > count ? 1 : -1;
+    count = next;
+    save(count);
+    render(dir);
+  }
+
+  plusBtn.addEventListener('click', function () { setCount(count + 1); });
+  minusBtn.addEventListener('click', function () { setCount(count - 1); });
+
+  // Reset needs a second tap within 3 seconds to avoid accidental resets mid-game.
+  var armTimer = null;
+  function disarm() {
+    clearTimeout(armTimer);
+    armTimer = null;
+    resetBtn.classList.remove('armed');
+    resetBtn.textContent = 'リセット';
+    hintEl.textContent = '';
+  }
+  resetBtn.addEventListener('click', function () {
+    if (count === 0) {
+      disarm();
+      hintEl.textContent = 'すでに0枚です';
+      return;
+    }
+    if (armTimer) {
+      disarm();
+      setCount(0);
+      hintEl.textContent = '0枚に戻しました';
+      return;
+    }
+    resetBtn.classList.add('armed');
+    resetBtn.textContent = 'もう一度押してリセット';
+    hintEl.textContent = '3秒以内にもう一度押すと0枚に戻ります';
+    armTimer = setTimeout(disarm, 3000);
+  });
+
+  // Keep multiple tabs in sync.
+  window.addEventListener('storage', function (e) {
+    if (e.key !== STORAGE_KEY) return;
+    var n = load();
+    if (n !== count) {
+      var dir = n > count ? 1 : -1;
+      count = n;
+      render(dir);
+    }
+  });
+
+  render(0);
+})();
+</script>
+</body>
+</html>
